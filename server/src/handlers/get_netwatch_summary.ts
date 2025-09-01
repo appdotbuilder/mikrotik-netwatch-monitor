@@ -1,19 +1,41 @@
+import { db } from '../db';
+import { netwatchDevicesTable, routerProfilesTable } from '../db/schema';
 import { type NetwatchSummary } from '../schema';
+import { eq, count, and, sql } from 'drizzle-orm';
 
 export async function getNetwatchSummary(routerProfileId: number): Promise<NetwatchSummary> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is calculating and returning summary statistics for netwatch devices.
-    // This provides the dashboard with total, up, and down device counts for a specific router profile.
-    
-    // Mock summary data for demonstration
-    const upDevices = Math.floor(Math.random() * 8) + 2; // 2-9 devices up
-    const downDevices = Math.floor(Math.random() * 3); // 0-2 devices down
-    const totalDevices = upDevices + downDevices;
-    
-    return Promise.resolve({
-        total_devices: totalDevices,
-        up_devices: upDevices,
-        down_devices: downDevices,
-        last_updated: new Date()
-    } as NetwatchSummary);
+  try {
+    // Verify router profile exists
+    const routerProfile = await db.select()
+      .from(routerProfilesTable)
+      .where(eq(routerProfilesTable.id, routerProfileId))
+      .execute();
+
+    if (routerProfile.length === 0) {
+      throw new Error(`Router profile with ID ${routerProfileId} not found`);
+    }
+
+    // Get summary statistics for the specified router profile
+    const summaryResult = await db.select({
+      total_devices: count(),
+      up_devices: sql<number>`COUNT(CASE WHEN ${netwatchDevicesTable.status} = 'up' THEN 1 END)`,
+      down_devices: sql<number>`COUNT(CASE WHEN ${netwatchDevicesTable.status} = 'down' THEN 1 END)`,
+      last_updated: sql<Date>`MAX(${netwatchDevicesTable.updated_at})`
+    })
+    .from(netwatchDevicesTable)
+    .where(eq(netwatchDevicesTable.router_profile_id, routerProfileId))
+    .execute();
+
+    const result = summaryResult[0];
+
+    return {
+      total_devices: Number(result.total_devices),
+      up_devices: Number(result.up_devices),
+      down_devices: Number(result.down_devices),
+      last_updated: result.last_updated ? new Date(result.last_updated) : new Date()
+    };
+  } catch (error) {
+    console.error('Get netwatch summary failed:', error);
+    throw error;
+  }
 }

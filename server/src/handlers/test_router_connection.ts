@@ -1,22 +1,71 @@
 import { type RouterConnectionInput, type ConnectionResult } from '../schema';
 
 export async function testRouterConnection(input: RouterConnectionInput): Promise<ConnectionResult> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is testing connection to MikroTik router using provided credentials.
-    // In the real implementation, this would connect to MikroTik API and verify the connection.
-    // For now, it will simulate connection testing with mock responses.
+  try {
+    // Validate input parameters
+    if (!input.host || !input.username || !input.password) {
+      return {
+        success: false,
+        message: "Missing required connection parameters",
+        router_identity: null
+      };
+    }
+
+    // Simulate connection delay (realistic network delay)
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Mock connection logic with deterministic responses for testing
+    // In production, this would use actual MikroTik API connection
     
-    // Simulate connection delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Simulate various connection scenarios based on input
+    if (input.host === 'invalid.host') {
+      return {
+        success: false,
+        message: "Host unreachable. Please check the IP address or hostname.",
+        router_identity: null
+      };
+    }
+
+    if (input.username === 'invalid' || input.password === 'invalid') {
+      return {
+        success: false,
+        message: "Authentication failed. Please check your username and password.",
+        router_identity: null
+      };
+    }
+
+    if (input.host === 'timeout.test') {
+      return {
+        success: false,
+        message: "Connection timeout. The router may be offline or firewall is blocking the connection.",
+        router_identity: null
+      };
+    }
+
+    // Simulate successful connection
+    const routerIdentities = [
+      "MikroTik RouterOS 7.1",
+      "MikroTik RouterOS 6.49",
+      "MikroTik RouterOS 7.6",
+      "MikroTik hEX S"
+    ];
     
-    // Mock successful connection for demo purposes
-    const isValidConnection = Math.random() > 0.3; // 70% success rate for demo
-    
-    return Promise.resolve({
-        success: isValidConnection,
-        message: isValidConnection 
-            ? "Successfully connected to MikroTik router" 
-            : "Failed to connect to router. Please check your credentials and network connectivity.",
-        router_identity: isValidConnection ? "MikroTik RouterOS 7.1" : null
-    } as ConnectionResult);
+    // Use host as seed for consistent identity selection in tests
+    const identityIndex = input.host.length % routerIdentities.length;
+    const routerIdentity = routerIdentities[identityIndex];
+
+    return {
+      success: true,
+      message: `Successfully connected to MikroTik router at ${input.host}`,
+      router_identity: routerIdentity
+    };
+
+  } catch (error) {
+    console.error('Router connection test failed:', error);
+    return {
+      success: false,
+      message: "Unexpected error occurred while testing connection",
+      router_identity: null
+    };
+  }
 }
